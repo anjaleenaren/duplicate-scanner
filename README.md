@@ -2,6 +2,10 @@
 
 A modern Electron application for finding and managing duplicate files across your system. Built with Python for efficient file processing and Electron for a beautiful cross-platform interface.
 
+
+https://github.com/user-attachments/assets/9bb34331-e563-4fe0-baf9-19fdb8da9441
+
+
 ## Features
 
 - 🎯 Find duplicate files across multiple directories
