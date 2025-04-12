@@ -1,0 +1,54 @@
+{
+  "name": "electron-duplicate-finder",
+  "version": "1.0.0",
+  "description": "Electron GUI for the Python duplicate file finder",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "electron",
+    "duplicate",
+    "files",
+    "finder",
+    "python"
+  ],
+  "author": "",
+  "license": "ISC",
+  "build": {
+    "appId": "com.electron.duplicate-finder",
+    "productName": "Duplicate File Finder",
+    "mac": {
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility"
+    },
+    "files": [
+      "**/*",
+      "../duplicate_finder.py"
+    ],
+    "extraResources": [
+      {
+        "from": "../duplicate_finder.py",
+        "to": "duplicate_finder.py"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^35.1.5",
+    "electron-builder": "^26.0.12"
+  }
+}

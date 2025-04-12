@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Duplicate File Finder</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      margin-top: 0;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #directoryList {
+      margin: 10px 0;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 50px;
+    }
+    #outputArea {
+      white-space: pre-wrap;
+      font-family: monospace;
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    .progress-container {
+      width: 100%;
+      background-color: #ddd;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .progress-bar {
+      height: 20px;
+      background-color: #4CAF50;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    #duplicatesContainer {
+      margin-top: 20px;
+    }
+    .duplicate-group {
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .duplicate-file {
+      margin: 5px 0;
+      padding: 5px;
+      background-color: white;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+    }
+    .duplicate-file input[type="checkbox"] {
+      margin-right: 10px;
+    }
+    .hidden {
+      display: none;
+    }
+    .space-wasted {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #e74c3c;
+      margin: 10px 0;
+    }
+    .group-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .group-actions button {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Duplicate File Finder</h1>
+    
+    <div class="form-group">
+      <label>Select Directories:</label>
+      <button id="selectDirBtn">Browse...</button>
+      <div id="directoryList">No directories selected</div>
+    </div>
+    
+    <div class="form-group">
+      <label>
+        <input type="checkbox" id="recursiveCheck" checked>
+        Scan Directories Recursively
+      </label>
+    </div>
+    
+    <div class="form-group">
+      <label for="hashAlgorithm">Hash Algorithm:</label>
+      <select id="hashAlgorithm">
+        <option value="md5">MD5 (Faster)</option>
+        <option value="sha1">SHA1</option>
+        <option value="sha256">SHA256 (More Secure)</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="outputFile">Output File for Duplicates (Optional):</label>
+      <input type="text" id="outputFile" placeholder="e.g., duplicates.txt">
+    </div>
+    
+    <button id="scanBtn">Scan for Duplicates</button>
+    
+    <div class="progress-container hidden" id="progressContainer">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    
+    <div id="outputArea" class="hidden"></div>
+    
+    <div id="duplicatesContainer" class="hidden">
+      <h2>Duplicate Files</h2>
+      <div id="spaceWasted" class="space-wasted hidden"></div>
+      <div class="group-actions">
+        <button id="selectAllBtn" class="hidden">Select All Duplicates</button>
+        <button id="deleteSelectedBtn" class="hidden">Delete Selected Files</button>
+      </div>
+      <div id="duplicatesList"></div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    
+    // DOM Elements
+    const selectDirBtn = document.getElementById('selectDirBtn');
+    const directoryList = document.getElementById('directoryList');
+    const recursiveCheck = document.getElementById('recursiveCheck');
+    const hashAlgorithm = document.getElementById('hashAlgorithm');
+    const outputFile = document.getElementById('outputFile');
+    const scanBtn = document.getElementById('scanBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const outputArea = document.getElementById('outputArea');
+    const duplicatesContainer = document.getElementById('duplicatesContainer');
+    const duplicatesList = document.getElementById('duplicatesList');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const spaceWasted = document.getElementById('spaceWasted');
+    
+    // Store selected directories
+    let selectedDirectories = [];
+    
+    // Handle directory selection
+    selectDirBtn.addEventListener('click', async () => {
+      try {
+        const dirs = await ipcRenderer.invoke('select-directories');
+        if (dirs && dirs.length > 0) {
+          selectedDirectories = dirs;
+          directoryList.innerHTML = dirs.join('<br>');
+        }
+      } catch (error) {
+        console.error('Error selecting directories:', error);
+      }
+    });
+    
+    // Handle scan button click
+    scanBtn.addEventListener('click', async () => {
+      if (selectedDirectories.length === 0) {
+        alert('Please select at least one directory to scan.');
+        return;
+      }
+      
+      // Reset UI
+      outputArea.innerHTML = '';
+      outputArea.classList.remove('hidden');
+      progressContainer.classList.remove('hidden');
+      progressBar.style.width = '0%';
+      duplicatesContainer.classList.add('hidden');
+      duplicatesList.innerHTML = '';
+      
+      // Run duplicate finder
+      try {
+        const args = {
+          directories: selectedDirectories,
+          recursive: recursiveCheck.checked,
+          hashAlgorithm: hashAlgorithm.value,
+          outputFile: outputFile.value || null
+        };
+        
+        const result = await ipcRenderer.invoke('run-duplicate-finder', args);
+        
+        // Hide progress
+        progressContainer.classList.add('hidden');
+        
+        // Parse and display results
+        displayResults(result.data);
+      } catch (error) {
+        outputArea.innerHTML += `\nError: ${error.message || JSON.stringify(error)}`;
+        progressContainer.classList.add('hidden');
+      }
+    });
+    
+    // Handle progress updates from Python
+    ipcRenderer.on('process-update', (event, data) => {
+      outputArea.innerHTML += data;
+      outputArea.scrollTop = outputArea.scrollHeight;
+      
+      // Update progress bar based on messages
+      if (data.includes('Step 1:')) {
+        progressBar.style.width = '20%';
+      } else if (data.includes('Step 2:')) {
+        progressBar.style.width = '50%';
+      } else if (data.includes('Finished hashing files!')) {
+        progressBar.style.width = '80%';
+      } else if (data.includes('Found') && data.includes('duplicate files')) {
+        progressBar.style.width = '100%';
+        
+        // Parse duplicate groups and display them
+        setTimeout(() => {
+          progressContainer.classList.add('hidden');
+        }, 500);
+      }
+    });
+    
+    // Handle errors from Python
+    ipcRenderer.on('process-error', (event, data) => {
+      outputArea.innerHTML += `\nERROR: ${data}`;
+      outputArea.scrollTop = outputArea.scrollHeight;
+    });
+    
+    // Function to select all files in a group
+    function selectGroup(groupDiv) {
+      const checkboxes = groupDiv.querySelectorAll('input[type="checkbox"]');
+      // Only select all but the first checkbox in the group
+      for (let i = 1; i < checkboxes.length; i++) {
+        checkboxes[i].checked = true;
+      }
+    }
+    
+    // Handle select all button
+    selectAllBtn.addEventListener('click', () => {
+      const groups = document.querySelectorAll('.duplicate-group');
+      groups.forEach(group => {
+        const checkboxes = group.querySelectorAll('input[type="checkbox"]');
+        // Only select all but the first checkbox in each group
+        for (let i = 1; i < checkboxes.length; i++) {
+          checkboxes[i].checked = true;
+        }
+      });
+    });
+    
+    // Function to parse and display results
+    function displayResults(data) {
+      // Check if duplicates were found
+      if (data.includes('No duplicate files found.')) {
+        duplicatesContainer.classList.add('hidden');
+        return;
+      }
+      
+      duplicatesContainer.classList.remove('hidden');
+      deleteSelectedBtn.classList.remove('hidden');
+      selectAllBtn.classList.remove('hidden');
+      
+      // Extract total space wasted from the header
+      const wastedSpaceMatch = data.match(/Wasted disk space: ([\d.]+ [KMGT]?B)/);
+      if (wastedSpaceMatch) {
+        spaceWasted.classList.remove('hidden');
+        spaceWasted.textContent = `Total Space Wasted: ${wastedSpaceMatch[1]}`;
+      }
+      
+      // Calculate and display space wasted
+      const groups = data.split('Duplicate Group #');
+      
+      // Skip the first element (it's everything before the first group)
+      for (let i = 1; i < groups.length; i++) {
+        const group = groups[i];
+        const lines = group.split('\n');
+        
+        // Create a container for this duplicate group
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'duplicate-group';
+        
+        // Add the group header and actions
+        const header = document.createElement('h3');
+        header.textContent = `Duplicate Group #${i}`;
+        groupDiv.appendChild(header);
+        
+        // Add group-specific actions
+        const groupActions = document.createElement('div');
+        groupActions.className = 'group-actions';
+        const autoSelectBtn = document.createElement('button');
+        autoSelectBtn.textContent = 'Auto Select Duplicates';
+        autoSelectBtn.onclick = () => selectGroup(groupDiv);
+        groupActions.appendChild(autoSelectBtn);
+        groupDiv.appendChild(groupActions);
+        
+        // Find files in this group and sort by modification time
+        const files = [];
+        for (let j = 0; j < lines.length; j++) {
+          const line = lines[j].trim();
+          if (line.startsWith('/') || line.startsWith('C:')) {
+            // This is a file path with size
+            const sizeMatch = line.match(/\((.*?)\)/);
+            const filePath = sizeMatch ? line.substring(0, line.lastIndexOf('(')).trim() : line;
+            const fileSize = sizeMatch ? sizeMatch[1] : '';
+            
+            // Get modification time from the next line
+            const modTimeLine = lines[j + 1].trim();
+            const modTimeMatch = modTimeLine.match(/Last modified: (.*)/);
+            const modTime = modTimeMatch ? new Date(modTimeMatch[1]) : new Date(0);
+            
+            files.push({
+              path: filePath,
+              size: fileSize,
+              modTime: modTime,
+              displayLine: line
+            });
+          }
+        }
+        
+        // Sort files by modification time (most recent first)
+        files.sort((a, b) => b.modTime - a.modTime);
+        
+        // Display files in sorted order
+        files.forEach((file, index) => {
+          const fileDiv = document.createElement('div');
+          fileDiv.className = 'duplicate-file';
+          
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = file.path;
+          
+          // Don't check the first file (most recent)
+          if (index > 0) {
+            checkbox.checked = true;
+          }
+          
+          const fileLabel = document.createElement('span');
+          fileLabel.textContent = file.displayLine;
+          
+          fileDiv.appendChild(checkbox);
+          fileDiv.appendChild(fileLabel);
+          groupDiv.appendChild(fileDiv);
+        });
+        
+        duplicatesList.appendChild(groupDiv);
+      }
+    }
+    
+    // Handle delete button
+    deleteSelectedBtn.addEventListener('click', async () => {
+      const checkboxes = document.querySelectorAll('.duplicate-file input[type="checkbox"]:checked');
+      
+      if (checkboxes.length === 0) {
+        alert('No files selected for deletion.');
+        return;
+      }
+      
+      const filesToDelete = Array.from(checkboxes).map(cb => {
+        // Get the full path from the checkbox value
+        const path = cb.value;
+        console.log('Processing file path:', path);
+        return path;
+      });
+      
+      console.log('Files to delete:', filesToDelete);
+      
+      // Show confirmation dialog
+      const confirmation = confirm(`Are you sure you want to delete ${filesToDelete.length} files?\n\nThis action cannot be undone!`);
+      
+      if (confirmation) {
+        try {
+          console.log('Sending delete request to main process...');
+          const results = await ipcRenderer.invoke('delete-files', filesToDelete);
+          console.log('Delete results:', results);
+          
+          // Handle results
+          const successCount = results.filter(r => r.success).length;
+          const failCount = results.length - successCount;
+          
+          if (successCount > 0) {
+            alert(`Successfully deleted ${successCount} files.`);
+            // Refresh the scan to update the display
+            scanBtn.click();
+          }
+          
+          if (failCount > 0) {
+            const failedFiles = results
+              .filter(r => !r.success)
+              .map(r => `${r.path}: ${r.error}`)
+              .join('\n');
+            console.error('Failed to delete files:', failedFiles);
+            alert(`Failed to delete ${failCount} files. Check the console for details.`);
+          }
+        } catch (error) {
+          console.error('Error during deletion:', error);
+          alert(`Error deleting files: ${error.message}`);
+        }
+      }
+    });
+    
+    // Helper function to parse file size strings
+    function parseFileSize(sizeStr) {
+      const match = sizeStr.match(/^(\d+(\.\d+)?)\s*([KMGT]?B)$/i);
+      if (!match) return 0;
+      
+      const value = parseFloat(match[1]);
+      const unit = match[3].toUpperCase();
+      
+      const units = {
+        'B': 1,
+        'KB': 1024,
+        'MB': 1024 * 1024,
+        'GB': 1024 * 1024 * 1024,
+        'TB': 1024 * 1024 * 1024 * 1024
+      };
+      
+      return value * (units[unit] || 1);
+    }
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let size = bytes;
+      let unitIndex = 0;
+      
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+      }
+      
+      return `${size.toFixed(2)} ${units[unitIndex]}`;
+    }
+  </script>
+</body>
+</html>
+

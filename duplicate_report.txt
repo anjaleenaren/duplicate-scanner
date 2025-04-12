@@ -1,0 +1,24 @@
+Scanning directories: /Users/anjalee/Documents
+Recursive scan: Yes
+Hash algorithm: md5
+
+Found 160 files to check for duplicates.
+Step 1: Grouping 160 files by size...
+Processing file 1/160...Processing file 101/160...Processing file 160/160...
+Step 2: Calculating hashes for files with matching sizes...
+Hashing file 10/30...Hashing file 20/30...Hashing file 30/30...
+Finished hashing files!
+
+--------------------------------------------------------------------------------
+Found 1 duplicate files in 1 groups
+Wasted disk space: 1.23 MB
+--------------------------------------------------------------------------------
+
+Duplicate Group #1 - 2 files, 1.23 MB each:
+  /Users/anjalee/Documents/Immunization Records/567197.pdf
+    Last modified: 2022-12-24 18:23:10
+  /Users/anjalee/Documents/Immunization Records/567198.pdf
+    Last modified: 2022-12-24 18:23:44
+  Wasted space: 1.23 MB
+
+Total execution time: 0.01 seconds
