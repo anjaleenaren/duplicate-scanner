@@ -22,7 +22,7 @@ function createWindow() {
   mainWindow.loadFile('index.html');
 
   // Open DevTools during development (comment out for production)
-  mainWindow.webContents.openDevTools();
+  //mainWindow.webContents.openDevTools();
 
   // Handle window being closed
   mainWindow.on('closed', function () {

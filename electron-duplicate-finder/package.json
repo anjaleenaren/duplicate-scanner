@@ -22,11 +22,15 @@
     "appId": "com.electron.duplicate-finder",
     "productName": "Duplicate File Finder",
     "mac": {
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "target": ["dmg", "zip"]
     },
     "win": {
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
       ]
     },
     "linux": {
@@ -38,14 +42,26 @@
     },
     "files": [
       "**/*",
-      "../duplicate_finder.py"
+      "!node_modules/**/*",
+      "!src/**/*",
+      "!*.log",
+      "!*.map"
     ],
     "extraResources": [
       {
         "from": "../duplicate_finder.py",
         "to": "duplicate_finder.py"
       }
-    ]
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "devDependencies": {
     "electron": "^35.1.5",

@@ -162,4 +162,88 @@ This project is licensed under the ISC License - see the LICENSE file for detail
 
 - Electron team for the amazing framework
 - Python community for robust file handling libraries
-- All contributors and users of this project 
+- All contributors and users of this project
+
+## Packaging for Distribution
+
+### Prerequisites for Packaging
+
+- Node.js (v14 or later)
+- Python 3.7 or later
+- npm or yarn
+- For Windows: NSIS (for creating installers)
+- For macOS: Xcode Command Line Tools
+- For Linux: fpm, rpm, dpkg (for creating packages)
+
+### Building Distribution Packages
+
+1. **Install Dependencies**
+```bash
+cd electron-duplicate-finder
+npm install
+```
+
+2. **Build for All Platforms**
+```bash
+npm run dist
+```
+
+This will create installers in the `dist` directory:
+- Windows: `.exe` installer
+- macOS: `.dmg` and `.zip` files
+- Linux: `.AppImage` and `.deb` packages
+
+### Platform-Specific Builds
+
+1. **Windows Only**
+```bash
+npm run dist -- --win
+```
+
+2. **macOS Only**
+```bash
+npm run dist -- --mac
+```
+
+3. **Linux Only**
+```bash
+npm run dist -- --linux
+```
+
+### Distribution Files
+
+After building, you'll find the following files in the `dist` directory:
+
+- **Windows**
+  - `Duplicate File Finder Setup.exe` - Installer
+  - `Duplicate File Finder Setup.exe.blockmap` - Update metadata
+
+- **macOS**
+  - `Duplicate File Finder.dmg` - Disk image
+  - `Duplicate File Finder.zip` - Compressed archive
+
+- **Linux**
+  - `Duplicate File Finder.AppImage` - Portable executable
+  - `Duplicate File Finder.deb` - Debian package
+
+### Important Notes for Distribution
+
+1. **Python Dependencies**
+   - The Python script is bundled with the application
+   - Users don't need to install Python separately
+   - The script is placed in the application's resources directory
+
+2. **File Permissions**
+   - The application requires read/write permissions for scanning directories
+   - On macOS/Linux, users might need to grant permissions manually
+   - On Windows, the installer handles permission requests
+
+3. **Updates**
+   - The application includes auto-update capabilities
+   - Updates are handled through the electron-builder auto-update feature
+   - Users will be notified when new versions are available
+
+4. **Security Considerations**
+   - The application runs with the user's permissions
+   - File deletion requires explicit user confirmation
+   - All operations are logged for transparency 
